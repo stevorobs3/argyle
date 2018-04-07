@@ -68,7 +68,7 @@ package object reader {
       }
   }
   
-  implicit def listParser[A : Reader]: Reader[List[A]] = summon[List[A]]{s =>
-    Utils.sequence(s.split(",").filter(_.nonEmpty).toList.map(implicitly[Reader[A]].apply))
+  implicit def listParser[A : Reader](implicit separator: Separator = Separator(",")) = summon[List[A]]{s =>
+    Utils.sequence(s.split(separator.pattern).filter(_.nonEmpty).toList.map(implicitly[Reader[A]].apply))
   }
 }

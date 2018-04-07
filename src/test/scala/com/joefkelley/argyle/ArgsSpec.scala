@@ -6,6 +6,7 @@ import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, LocalTime}
 import java.util.concurrent.TimeUnit
 
+import com.joefkelley.argyle.reader.Separator
 import org.scalatest._
 import org.scalatest.matchers._
 
@@ -652,6 +653,11 @@ class ArgsSpec extends FlatSpec with Matchers {
   it should "nest with either" in {
     val arg = required[List[Either[Int, Char]]]("--foo")
     arg.parse("--foo", "1,b,3") should succeedWith(List(Left(1),Right('b'),Left(3)))
+  }
+  it should "allow a custom separator to be specified" in {
+    implicit val sep = Separator("=====")
+    val arg = required[List[Int]]("--foo")
+    arg.parse("--foo", "1=====3=====5=====7") should succeedWith(List(1,3,5,7))
   }
   
   "Parser" should "fail on unused argument" in {
