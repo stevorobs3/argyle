@@ -49,12 +49,16 @@ package object reader {
   implicit val ScalaDurationParser = safeSummon[Duration](s  => Duration(s))
   implicit val JavaDurationParser  = safeSummon[jDuration](s => jDuration.parse(s))
 
-  implicit val DateParser = safeSummon[LocalDate](s => LocalDate.parse(s, DateTimeFormatter.ISO_DATE))
-  implicit val TimeParser = safeSummon[LocalTime](s => LocalTime.parse(s, DateTimeFormatter.ISO_TIME))
+  implicit def DateParser(implicit dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ISO_DATE) =
+    safeSummon[LocalDate](s => LocalDate.parse(s, dateTimeFormatter))
 
-  implicit val DateTimeParser = safeSummon[LocalDateTime]{s =>
-    LocalDateTime.parse(s, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-  }
+  implicit def TimeParser(implicit dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ISO_TIME) =
+    safeSummon[LocalTime](s => LocalTime.parse(s, dateTimeFormatter))
+
+  implicit def DateTimeParser(implicit dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME) =
+    safeSummon[LocalDateTime]{s =>
+      LocalDateTime.parse(s, dateTimeFormatter)
+    }
   
   implicit def eitherParser[A : Reader, B : Reader] = summon[Either[A, B]]{s =>
     implicitly[Reader[A]].apply(s)
