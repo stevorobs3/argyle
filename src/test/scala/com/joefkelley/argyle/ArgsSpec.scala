@@ -1,16 +1,16 @@
 package com.joefkelley.argyle
 
+import java.io.File
+import java.nio.file.{Path, Paths}
+import java.time.format.DateTimeFormatter
+import java.time.{LocalDate, LocalDateTime, LocalTime}
+import java.util.concurrent.TimeUnit
+
+import com.joefkelley.argyle.reader.Separator
 import org.scalatest._
 import org.scalatest.matchers._
-import com.joefkelley.argyle._
+
 import scala.util.{Failure, Success, Try}
-import java.io.File
-import java.nio.file.Paths
-import java.nio.file.Path
-import java.util.concurrent.TimeUnit
-import java.time.LocalDate
-import java.time.LocalTime
-import java.time.LocalDateTime
 
 class ArgsSpec extends FlatSpec with Matchers {
   
@@ -598,17 +598,33 @@ class ArgsSpec extends FlatSpec with Matchers {
   it should "not work with invalid value" in {
     required[LocalDate]("--foo").parse("--foo", "asdf") should fail
   }
+  it should "allow a customer DateTimeFormatter to be specified" in {
+    implicit val dateTimeFormatter = DateTimeFormatter.ISO_DATE
+    val time = "2011-12-03"
+    required[LocalDate]("--foo").parse("--foo", time) should succeedWith(LocalDate.of(2011, 12, 3))
+  }
+
   "Time parser" should "work with valid value" in {
     required[LocalTime]("--foo").parse("--foo", "00:00:00") should succeedWith(LocalTime.of(0, 0, 0))
   }
   it should "not work with invalid value" in {
     required[LocalTime]("--foo").parse("--foo", "asdf") should fail
   }
+  it should "allow a customer DateTimeFormatter to be specified" in {
+    implicit val dateTimeFormatter = DateTimeFormatter.ISO_TIME
+    val time = "10:15"
+    required[LocalTime]("--foo").parse("--foo", time) should succeedWith(LocalTime.of(10, 15, 0))
+  }
   "DateTime parser" should "work with valid value" in {
     required[LocalDateTime]("--foo").parse("--foo", "1970-01-01T00:00:00") should succeedWith(LocalDateTime.of(1970, 1, 1, 0, 0, 0))
   }
   it should "not work with invalid value" in {
     required[LocalDateTime]("--foo").parse("--foo", "asdf") should fail
+  }
+  it should "allow a customer DateTimeFormatter to be specified" in {
+    implicit val dateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+    val dateTime = "1970-01-01T00:00:00+01:00"
+    required[LocalDateTime]("--foo").parse("--foo", dateTime) should succeedWith(LocalDateTime.of(1970, 1, 1, 0, 0, 0))
   }
   
   "Either parser" should "work left" in {
@@ -637,6 +653,30 @@ class ArgsSpec extends FlatSpec with Matchers {
   it should "nest with either" in {
     val arg = required[List[Either[Int, Char]]]("--foo")
     arg.parse("--foo", "1,b,3") should succeedWith(List(Left(1),Right('b'),Left(3)))
+  }
+  it should "allow a custom separator to be specified" in {
+    implicit val sep = Separator("=====")
+    val arg = required[List[Int]]("--foo")
+    arg.parse("--foo", "1=====3=====5=====7") should succeedWith(List(1,3,5,7))
+  }
+
+  "Set parser" should "work with empty list" in {
+    required[Set[Int]]("--foo").parse("--foo", "") should succeedWith(Set.empty[Int])
+  }
+  it should "work with comma separated list" in {
+    required[Set[Int]]("--foo").parse("--foo", "1,2,3") should succeedWith(Set(1,2,3))
+  }
+  it should "fail with invalid element" in {
+    required[Set[Int]]("--foo").parse("--foo", "1,a,3") should fail
+  }
+  it should "nest with either" in {
+    val arg = required[Set[Either[Int, Char]]]("--foo")
+    arg.parse("--foo", "1,b,3") should succeedWith(Set(Left(1),Right('b'),Left(3)))
+  }
+  it should "allow a custom separator to be specified" in {
+    implicit val sep = Separator("=====")
+    val arg = required[Set[Int]]("--foo")
+    arg.parse("--foo", "1=====3=====5=====7") should succeedWith(Set(1,3,5,7))
   }
   
   "Parser" should "fail on unused argument" in {

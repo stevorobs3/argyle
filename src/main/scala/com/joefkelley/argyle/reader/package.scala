@@ -49,12 +49,16 @@ package object reader {
   implicit val ScalaDurationParser = safeSummon[Duration](s  => Duration(s))
   implicit val JavaDurationParser  = safeSummon[jDuration](s => jDuration.parse(s))
 
-  implicit val DateParser = safeSummon[LocalDate](s => LocalDate.parse(s, DateTimeFormatter.ISO_DATE))
-  implicit val TimeParser = safeSummon[LocalTime](s => LocalTime.parse(s, DateTimeFormatter.ISO_TIME))
+  implicit def DateParser(implicit dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ISO_DATE) =
+    safeSummon[LocalDate](s => LocalDate.parse(s, dateTimeFormatter))
 
-  implicit val DateTimeParser = safeSummon[LocalDateTime]{s =>
-    LocalDateTime.parse(s, DateTimeFormatter.ISO_LOCAL_DATE_TIME)
-  }
+  implicit def TimeParser(implicit dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ISO_TIME) =
+    safeSummon[LocalTime](s => LocalTime.parse(s, dateTimeFormatter))
+
+  implicit def DateTimeParser(implicit dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME) =
+    safeSummon[LocalDateTime]{s =>
+      LocalDateTime.parse(s, dateTimeFormatter)
+    }
   
   implicit def eitherParser[A : Reader, B : Reader] = summon[Either[A, B]]{s =>
     implicitly[Reader[A]].apply(s)
@@ -64,7 +68,19 @@ package object reader {
       }
   }
   
-  implicit def listParser[A : Reader]: Reader[List[A]] = summon[List[A]]{s =>
-    Utils.sequence(s.split(",").filter(_.nonEmpty).toList.map(implicitly[Reader[A]].apply))
+  implicit def listParser[A : Reader](implicit separator: Separator = Separator(",")) : Reader[List[A]] = summon[List[A]]{s =>
+    parseArgSequence(s)(separator, implicitly[Reader[A]])
   }
+
+  implicit def setParser[A : Reader](implicit separator: Separator = Separator(",")) : Reader[Set[A]] = summon[Set[A]]{s =>
+    parseArgSequence(s)(separator, implicitly[Reader[A]]).map(_.toSet)
+  }
+
+  private def parseArgSequence[A](s : String)(
+    implicit separator: Separator,
+    reader : Reader[A]
+  ) : Try[List[A]]= {
+    Utils.sequence(s.split(separator.pattern).filter(_.nonEmpty).toList.map(reader.apply))
+  }
+
 }
